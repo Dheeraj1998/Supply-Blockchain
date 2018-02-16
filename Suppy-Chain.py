@@ -10,6 +10,7 @@ import json
 # Global variables
 supply_blockchain = []
 utxo_array = []
+global_index = 0
 
 class Supply_Block:
 	
@@ -44,6 +45,9 @@ class Transaction:
 
 # This function is used to create genesis block
 def create_genesis_block():
+	global global_index 
+	global_index = global_index + 1
+	
 	return Supply_Block(0, date.datetime.now(), "GENESIS BLOCK", "0")
 
 # Inserting a genesis block into blockchain
@@ -106,8 +110,19 @@ def verify_transaction(self):
 	hash_message = SHA256.new(message.encode('utf-8')).digest()
 	
 	return self.supplier_puk.verify(hash_message, self.signature)
+
+# The function for mining the block in the supply blockchain
+def mine_block():
+	global global_index
 	
+	new_block = Supply_Block(global_index, date.datetime.now(), utxo_array[0], supply_blockchain[global_index - 1].hash)
+	global_index = global_index + 1
+	supply_blockchain.append(new_block)
+
 view_blockchain()
 make_transaction('a','a','a')
 view_UTXO()
 verify_transaction(utxo_array[0])
+
+mine_block()
+view_blockchain()
