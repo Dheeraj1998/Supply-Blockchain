@@ -66,7 +66,7 @@ def view_UTXO():
 	print('\n\nThe list of UTXO are: \n')
 	for transaction in utxo_array:
 		print('------------------------------')
-		print(transaction.supplier_puk)
+		print(transaction.supplier_puk.exportKey("PEM").decode('utf-8'))
 		print(transaction.receiver_puk)
 		print(transaction.item_id)
 		print(transaction.timestamp)
@@ -88,11 +88,11 @@ def make_transaction(supplier_key, receiver_puk, item_id):
 	item_id = '1'
 	
 	# Acquiring the details for the transactions
-	supplier_puk = supplier_key.publickey().exportKey("PEM").decode('utf-8')
+	supplier_puk = supplier_key.publickey()
 	timestamp = date.datetime.now()
 	
 	# Generating the message text and the signature
-	message = str(supplier_puk) + str(receiver_puk) + item_id + str(timestamp)
+	message = str(supplier_puk.exportKey("PEM").decode('utf-8')) + str(receiver_puk) + item_id + str(timestamp)
 	hash_message = SHA256.new(message.encode('utf-8')).digest()
 	signature = supplier_key.sign(hash_message, '')
 	
@@ -100,6 +100,14 @@ def make_transaction(supplier_key, receiver_puk, item_id):
 	new_transaction = Transaction(supplier_puk, receiver_puk, item_id, timestamp, signature)
 	utxo_array.append(new_transaction)
 
+# This function is used for the verifying the signature of the transaction
+def verify_transaction(self):
+	message = str(self.supplier_puk.exportKey("PEM").decode('utf-8')) + str(self.receiver_puk) + self.item_id + str(self.timestamp)
+	hash_message = SHA256.new(message.encode('utf-8')).digest()
+	
+	return self.supplier_puk.verify(hash_message, self.signature)
+	
 view_blockchain()
 make_transaction('a','a','a')
 view_UTXO()
+verify_transaction(utxo_array[0])
