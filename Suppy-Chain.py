@@ -2,9 +2,14 @@
 import hashlib as hasher
 import datetime as date
 import pickle
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto import Random
+import json
 
 # Global variables
 supply_blockchain = []
+utxo_array = []
 
 class Supply_Block:
 	
@@ -30,9 +35,9 @@ class Supply_Block:
 class Transaction:
 	
 	# The initialisation function for a single transaction
-	def __init__(self, supplier_pk, receiver_pk, item_id, timestamp, signature):
-		self.supplier_pk = supplier_pk
-		self.receiver_pk = receiver_pk
+	def __init__(self, supplier_puk, receiver_puk, item_id, timestamp, signature):
+		self.supplier_puk = supplier_puk
+		self.receiver_puk = receiver_puk
 		self.item_id = item_id
 		self.timestamp = timestamp
 		self.signature = signature
@@ -46,7 +51,7 @@ supply_blockchain.append(create_genesis_block())
 
 # This function is used for viewing all the blocks and the transactions in the blockchain
 def view_blockchain():
-	print('\n')
+	print('\n\nThe list of blocks are: \n')
 	for block in supply_blockchain:
 		print('------------------------------')
 		print(block.index)
@@ -54,6 +59,47 @@ def view_blockchain():
 		print(block.supply_data)
 		print(block.previous_hash)
 	print('------------------------------')
+	print('\n')
+	
+# This function is used to view all the Unspend Transaction Outputs
+def view_UTXO():
+	print('\n\nThe list of UTXO are: \n')
+	for transaction in utxo_array:
+		print('------------------------------')
+		print(transaction.supplier_puk)
+		print(transaction.receiver_puk)
+		print(transaction.item_id)
+		print(transaction.timestamp)
+		print(transaction.signature)
+	print('------------------------------')
+	print('\n')
+
+# This function is used to generate a transaction
+def make_transaction(supplier_key, receiver_puk, item_id):
+	
+	# Generator functions for the keys and the other data
+	random_generator = Random.new().read
+	supplier_key = RSA.generate(1024, random_generator)
+	# print(supplier_key.exportKey().decode('utf-8'))
+	receiver_puk = RSA.generate(1024, random_generator)
+	# print(receiver_puk.exportKey().decode('utf-8'))
+	# print(receiver_puk.publickey().exportKey("PEM").decode('utf-8'))
+	receiver_puk = receiver_puk.publickey().exportKey("PEM").decode('utf-8')
+	item_id = '1'
+	
+	# Acquiring the details for the transactions
+	supplier_puk = supplier_key.publickey().exportKey("PEM").decode('utf-8')
+	timestamp = date.datetime.now()
+	
+	# Generating the message text and the signature
+	message = str(supplier_puk) + str(receiver_puk) + item_id + str(timestamp)
+	hash_message = SHA256.new(message.encode('utf-8')).digest()
+	signature = supplier_key.sign(hash_message, '')
+	
+	# Creating a new transaction
+	new_transaction = Transaction(supplier_puk, receiver_puk, item_id, timestamp, signature)
+	utxo_array.append(new_transaction)
 
 view_blockchain()
-
+make_transaction('a','a','a')
+view_UTXO()
