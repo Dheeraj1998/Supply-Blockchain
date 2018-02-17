@@ -12,6 +12,8 @@ import time
 # Global variables
 supply_blockchain = []
 utxo_array = []
+manufacturers_list = []
+other_users_list = []
 global_index = 0
 pow_proof = 0
 
@@ -108,17 +110,21 @@ def view_UTXO():
 	print('\n\n')
 
 # This function is used to generate a transaction
-def make_transaction(supplier_key, receiver_puk, item_id):
+def make_transaction(supplier_key, receiver_key, item_id):
 	
-	# Generator functions for the keys and the other data
-	random_generator = Random.new().read
-	supplier_key = RSA.generate(1024, random_generator)
-	# print(supplier_key.exportKey().decode('utf-8'))
-	receiver_puk = RSA.generate(1024, random_generator)
-	# print(receiver_puk.exportKey().decode('utf-8'))
-	# print(receiver_puk.publickey().exportKey("PEM").decode('utf-8'))
-	receiver_puk = receiver_puk.publickey().exportKey("PEM").decode('utf-8')
-	item_id = '1'
+	# Selection functions for the keys and the item ID
+	selection = input('Select type of key (M/O) for supplier: ')
+	if selection == 'M':
+		print(manufacturers_list)
+		index = input('\nThere are a total of ' + str(len(manufacturers_list)) + ' users. Enter your selection: ') - 1
+		supplier_key = manufacturers_list[index]
+	elif selection == 'O':
+		print(other_users_list)
+		index = input('\nThere are a total of ' + str(len(other_users_list)) + ' users. Enter your selection: ') - 1
+		receiver_key = other_users_list[index]
+	
+	receiver_puk = receiver_key.publickey().exportKey("PEM").decode('utf-8')
+	item_id = input('Enter the ID of the tracked item: ')
 	
 	# Acquiring the details for the transactions
 	supplier_puk = supplier_key.publickey()
@@ -166,18 +172,54 @@ def mine_block():
 		# Prevent addition of blocks with no transactions
 		print('No transactions have been selected and therefore no block has been added!')
 
+# The function would verify all the blocks in the given blockchain
+def verify_blockchain():
+	for block in supply_blockchain:
+		print('\n------------------------------------------------------------------------------------------------------------------------')
+		print(block.index)
+		print(block.timestamp)
+		print(block.supply_data)
+		print(block.proof_of_work)
+		print(block.hash)
+		print(block.previous_hash)
+	print('------------------------------------------------------------------------------------------------------------------------')
+	print('\n\n')
+
 # Inserting a genesis block into blockchain
 supply_blockchain.append(create_genesis_block())
 
+# Function for generating manufacturer keys
+def generate_manufacturer_keys(number):
+	for item in range(0, int(number)):
+		manufacturers_list.append(RSA.generate(1024, Random.new().read))
+	print(manufacturers_list)
+	print('\nThe manufacturer keys have been generated.')
+	
+# Function for generating other keys
+def generate_other_keys(number):
+	for item in range(0, int(number)):
+		other_users_list.append(RSA.generate(1024, Random.new().read))
+	print(other_users_list)
+	print('\nThe others keys have been generated.')
+
 # Menu driven program for the supply blockchain
 while(1):
-	print('\nWelcome to the supply blockchain. The following options are available to the user: ')
+	print('\n\nWelcome to the supply blockchain.')
+	
+	number_manufacturers = int(input('\nEnter the number of manufacturers: '))
+	generate_manufacturer_keys(number_manufacturers)
+	
+	number_other_users = int(input('\nEnter the number of other users: '))
+	generate_other_keys(number_other_users)
+	
+	print('\nThe following options are available to the user: ')
 	print('1. View the blockchain. ')
-	print('2. Generate a transaction. ')
+	print('2. Enter a transaction. ')
 	print('3. View the UTXO array. ')
 	print('4. Mine a block. ')
 	print('5. Verify the blockchain. ')
-	print('6. Exit.')
+	print('6. Generate RSA keys for other users. ')
+	print('7. Exit.')
 	
 	choice = int(input('Enter your choice: '))
 	
@@ -191,5 +233,8 @@ while(1):
 		mine_block()
 	elif(choice == 5):
 		verify_blockchain()
+	elif(choice == 6):
+		number = input('Enter the number of other users: ')
+		generate_other_keys(number)
 	else:
 		break
