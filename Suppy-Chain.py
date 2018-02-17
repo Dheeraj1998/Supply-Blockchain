@@ -116,11 +116,23 @@ def make_transaction(supplier_key, receiver_key, item_id):
 	selection = input('Select type of key (M/O) for supplier: ')
 	if selection == 'M':
 		print(manufacturers_list)
-		index = input('\nThere are a total of ' + str(len(manufacturers_list)) + ' users. Enter your selection: ') - 1
+		index = int(input('\nThere are a total of ' + str(len(manufacturers_list)) + ' users. Enter your selection: ')) - 1
 		supplier_key = manufacturers_list[index]
+		
 	elif selection == 'O':
 		print(other_users_list)
-		index = input('\nThere are a total of ' + str(len(other_users_list)) + ' users. Enter your selection: ') - 1
+		index = int(input('\nThere are a total of ' + str(len(other_users_list)) + ' users. Enter your selection: ')) - 1
+		supplier_key = other_users_list[index]
+		
+	selection = input('Select type of key (M/O) for receiver: ')
+	if selection == 'M':
+		print(manufacturers_list)
+		index = int(input('\nThere are a total of ' + str(len(manufacturers_list)) + ' users. Enter your selection: ')) - 1
+		receiver_key = manufacturers_list[index]
+		
+	elif selection == 'O':
+		print(other_users_list)
+		index = int(input('\nThere are a total of ' + str(len(other_users_list)) + ' users. Enter your selection: ')) - 1
 		receiver_key = other_users_list[index]
 	
 	receiver_puk = receiver_key.publickey().exportKey("PEM").decode('utf-8')
@@ -139,13 +151,6 @@ def make_transaction(supplier_key, receiver_key, item_id):
 	new_transaction = Transaction(supplier_puk, receiver_puk, item_id, timestamp, signature)
 	utxo_array.append(new_transaction)
 
-# This function is used for the verifying the signature of the transaction
-def verify_transaction(self):
-	message = str(self.supplier_puk.exportKey("PEM").decode('utf-8')) + str(self.receiver_puk) + self.item_id + str(self.timestamp)
-	hash_message = SHA256.new(message.encode('utf-8')).digest()
-	
-	return self.supplier_puk.verify(hash_message, self.signature)
-
 # The function for mining the block in the supply blockchain
 def mine_block():
 	global global_index
@@ -157,20 +162,75 @@ def mine_block():
 	
 	if(transaction_amount):
 		for index in range(0, transaction_amount):
+			# All verifications for the transactions
 			if(verify_transaction(utxo_array[0])):
-				print('The verification for transaction #' + str(index + 1) + ' was true!')
-				transaction_array.append(utxo_array[0])
+				print('\nThe sign verification for transaction #' + str(index + 1) + ' was true!')
+				if(check_item_code(utxo_array[0])):
+					print('The item code has been found. Checking the previous owner details.')
+					if(check_previous_owner(utxo_array[0])):
+						print('Verification of previous owner has been done!')
+						transaction_array.append(utxo_array[0])
+					else:
+						print('Verification of previous owner has failed!')
+				else:
+					print('The item code was not found on blockchain. Checking for manufacturer credentials.')
+					if(check_manufacturer_credentials(utxo_array[0])):
+						print('The new item has been added under the manufacturer.')
+						transaction_array.append(utxo_array[0])
+					else:
+						print('The transaction key is not authorised as a manufacturer!')
 			else:
-				print('The verification for transaction #' + str(index + 1) + ' was false!')
+				print('The sign verification for transaction #' + str(index + 1) + ' was false!')
 			utxo_array.pop(0)
-			
-		new_block = Supply_Block(global_index, date.datetime.now(), transaction_array, supply_blockchain[global_index - 1].hash)
-		global_index = global_index + 1
-		supply_blockchain.append(new_block)
+		
+		if(len(transaction_array) != 0):
+			new_block = Supply_Block(global_index, date.datetime.now(), transaction_array, supply_blockchain[global_index - 1].hash)
+			global_index = global_index + 1
+			supply_blockchain.append(new_block)
 		
 	else:
 		# Prevent addition of blocks with no transactions
 		print('No transactions have been selected and therefore no block has been added!')
+
+# This function is used for the verifying the signature of the transaction
+def verify_transaction(self):
+	message = str(self.supplier_puk.exportKey("PEM").decode('utf-8')) + str(self.receiver_puk) + self.item_id + str(self.timestamp)
+	hash_message = SHA256.new(message.encode('utf-8')).digest()
+	
+	return self.supplier_puk.verify(hash_message, self.signature)
+	
+# Smart contract for checking if the input item code is avaiable on the blockchain & checking the previous owner of the consignment
+def check_item_code(self):
+	found_flag = False
+	temp_blockchain = supply_blockchain[::-1]
+	
+	for block in temp_blockchain[:-1:]:
+		for transaction in block.supply_data:
+			if(transaction.item_id == self.item_id):
+				found_flag = True
+	
+	return found_flag
+	
+# Smart contract for 
+def check_previous_owner(self):
+	found_flag = False
+	temp_blockchain = supply_blockchain[::-1]
+	
+	for block in temp_blockchain[:-1:]:
+		for transaction in block.supply_data:
+			if(transaction.item_id == self.item_id):
+				if(transaction.receiver_puk == self.supplier_puk.exportKey("PEM").decode('utf-8')):
+					return True
+				else:
+					return False
+
+# Smart contract for checking if the user is an authorised manufacturer
+def check_manufacturer_credentials(self):
+	for item in manufacturers_list:
+		if str(self.supplier_puk.exportKey("PEM").decode('utf-8')) == str(item.publickey().exportKey("PEM").decode('utf-8')):
+			return True
+	
+	return False
 
 # The function would verify all the blocks in the given blockchain
 def verify_blockchain():
@@ -184,9 +244,6 @@ def verify_blockchain():
 		print(block.previous_hash)
 	print('------------------------------------------------------------------------------------------------------------------------')
 	print('\n\n')
-
-# Inserting a genesis block into blockchain
-supply_blockchain.append(create_genesis_block())
 
 # Function for generating manufacturer keys
 def generate_manufacturer_keys(number):
@@ -202,16 +259,19 @@ def generate_other_keys(number):
 	print(other_users_list)
 	print('\nThe others keys have been generated.')
 
+# Generating keys for manufactures and other users
+number_manufacturers = int(input('\nEnter the number of manufacturers: '))
+generate_manufacturer_keys(number_manufacturers)
+	
+number_other_users = int(input('\nEnter the number of other users: '))
+generate_other_keys(number_other_users)
+
+# Inserting a genesis block into blockchain
+supply_blockchain.append(create_genesis_block())
+print('\n\nWelcome to the supply blockchain.')
+
 # Menu driven program for the supply blockchain
 while(1):
-	print('\n\nWelcome to the supply blockchain.')
-	
-	number_manufacturers = int(input('\nEnter the number of manufacturers: '))
-	generate_manufacturer_keys(number_manufacturers)
-	
-	number_other_users = int(input('\nEnter the number of other users: '))
-	generate_other_keys(number_other_users)
-	
 	print('\nThe following options are available to the user: ')
 	print('1. View the blockchain. ')
 	print('2. Enter a transaction. ')
@@ -236,5 +296,7 @@ while(1):
 	elif(choice == 6):
 		number = input('Enter the number of other users: ')
 		generate_other_keys(number)
-	else:
+	elif(choice == 7):
 		break
+	else:
+		print('This is an invalid option.')
