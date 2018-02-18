@@ -44,7 +44,7 @@ class Supply_Block:
 def generate_pow():
 	start_time = time.time()
 	global pow_proof
-	initial_start = pow_proof
+	initial_start = pow_proof + 1
 	
 	while(1):
 		sha = hasher.sha256()
