@@ -15,7 +15,7 @@ utxo_array = []
 manufacturers_list = []
 other_users_list = []
 global_index = 0
-pow_proof = 0
+pow_proof = int(0)
 
 class Supply_Block:
 	
@@ -25,7 +25,7 @@ class Supply_Block:
 		self.timestamp = timestamp
 		self.supply_data = supply_data
 		self.previous_hash = previous_hash
-		self.proof_of_work = generate_pow()
+		self.proof_of_work = int(generate_pow())
 		self.hash = self.hash_block()
 		
 	# The hashing function for the block using SHA 256
@@ -44,23 +44,22 @@ class Supply_Block:
 def generate_pow():
 	start_time = time.time()
 	global pow_proof
-	
-	sha = hasher.sha256()
 	initial_start = pow_proof
 	
 	while(1):
+		sha = hasher.sha256()
 		sha.update(str(initial_start).encode('utf-8'))
 		hash_value = sha.hexdigest()
+		initial_start = int(initial_start) + 1
 		
 		if(hash_value[0] == '0' and hash_value[1] == '0' and hash_value[2] == '0' and hash_value[-1] == '0' and hash_value[-2] == '0'):
 			end_time = time.time()
-			pow_proof = initial_start
+			pow_proof = initial_start - 1
 			print('\nThe required hash value is: ' + hash_value)
 			print('The PoW number is: ' + str(pow_proof))
 			print('The total time taken is: ' + str((end_time - start_time)))
+			
 			break
-		
-		initial_start = initial_start + 1
 	
 	return pow_proof
 
@@ -132,7 +131,7 @@ def make_transaction(supplier_key, receiver_key, item_id):
 		receiver_key = other_users_list[index]
 	
 	receiver_puk = receiver_key.publickey().exportKey("PEM").decode('utf-8')
-	item_id = input('\nEnter the ID of the tracked item: ')
+	item_id = input('Enter the ID of the tracked item: ')
 	
 	# Acquiring the details for the transactions
 	supplier_puk = supplier_key.publickey()
@@ -230,14 +229,22 @@ def check_manufacturer_credentials(self):
 
 # The function would verify all the blocks in the given blockchain
 def verify_blockchain():
-	for block in supply_blockchain:
-		print('\n------------------------------------------------------------------------------------------------------------------------')
-		print(block.index)
-		print(block.timestamp)
-		print(block.supply_data)
-		print(block.proof_of_work)
-		print(block.hash)
-		print(block.previous_hash)
+	previous_block = supply_blockchain[0]
+	count = 1
+	
+	for block in supply_blockchain[1:]:
+		print('\nFor the block #' + str(count) + ': ')
+		for transaction in block.supply_data:
+			print('The item ID is ' + str(transaction.item_id) + ' and the associated timestamp is ' + str(transaction.timestamp))
+		
+		if(str(previous_block.hash) == str(block.previous_hash)):
+			print('The hash values have been verified.')
+		
+		sha = hasher.sha256()
+		sha.update(str(int(block.proof_of_work)).encode('utf-8'))
+		hash_value = sha.hexdigest()
+		print('The PoW number is ' + str(block.proof_of_work) + ' and the associated hash is ' + hash_value)
+		
 	print('------------------------------------------------------------------------------------------------------------------------')
 	print('\n\n')
 
