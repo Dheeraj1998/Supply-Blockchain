@@ -113,30 +113,26 @@ def view_UTXO():
 def make_transaction(supplier_key, receiver_key, item_id):
 	
 	# Selection functions for the keys and the item ID
-	selection = input('Select type of key (M/O) for supplier: ')
+	selection = input('\nSelect type of key (M/O) for supplier: ')
 	if selection == 'M':
-		print(manufacturers_list)
-		index = int(input('\nThere are a total of ' + str(len(manufacturers_list)) + ' users. Enter your selection: ')) - 1
+		index = int(input('There are a total of ' + str(len(manufacturers_list)) + ' users. Enter your selection: ')) - 1
 		supplier_key = manufacturers_list[index]
 		
 	elif selection == 'O':
-		print(other_users_list)
-		index = int(input('\nThere are a total of ' + str(len(other_users_list)) + ' users. Enter your selection: ')) - 1
+		index = int(input('There are a total of ' + str(len(other_users_list)) + ' users. Enter your selection: ')) - 1
 		supplier_key = other_users_list[index]
 		
-	selection = input('Select type of key (M/O) for receiver: ')
+	selection = input('\nSelect type of key (M/O) for receiver: ')
 	if selection == 'M':
-		print(manufacturers_list)
-		index = int(input('\nThere are a total of ' + str(len(manufacturers_list)) + ' users. Enter your selection: ')) - 1
+		index = int(input('There are a total of ' + str(len(manufacturers_list)) + ' users. Enter your selection: ')) - 1
 		receiver_key = manufacturers_list[index]
 		
 	elif selection == 'O':
-		print(other_users_list)
-		index = int(input('\nThere are a total of ' + str(len(other_users_list)) + ' users. Enter your selection: ')) - 1
+		index = int(input('There are a total of ' + str(len(other_users_list)) + ' users. Enter your selection: ')) - 1
 		receiver_key = other_users_list[index]
 	
 	receiver_puk = receiver_key.publickey().exportKey("PEM").decode('utf-8')
-	item_id = input('Enter the ID of the tracked item: ')
+	item_id = input('\nEnter the ID of the tracked item: ')
 	
 	# Acquiring the details for the transactions
 	supplier_puk = supplier_key.publickey()
@@ -211,7 +207,7 @@ def check_item_code(self):
 	
 	return found_flag
 	
-# Smart contract for 
+# Smart contract for checking the previous owner of the commodity
 def check_previous_owner(self):
 	found_flag = False
 	temp_blockchain = supply_blockchain[::-1]
@@ -252,18 +248,91 @@ def generate_manufacturer_keys(number):
 	print(manufacturers_list)
 	print('\nThe manufacturer keys have been generated.')
 	
-# Function for generating other keys
+# Function for generating stakeholder keys
 def generate_other_keys(number):
 	for item in range(0, int(number)):
 		other_users_list.append(RSA.generate(1024, Random.new().read))
 	print(other_users_list)
-	print('\nThe others keys have been generated.')
+	print('\nThe stakeholder keys have been generated.')
+	
+# Function for tracking an item
+def track_item(item_code):
+	not_found_flag = True
+	
+	for block in supply_blockchain[1:]:
+		for transaction in block.supply_data:
+			if(item_code == transaction.item_id):
+				if(not_found_flag):
+					print('\nThe item (' + item_code + ') has been found and the tracking details are: ')
+					not_found_flag = False
+				
+				manufacturer_suppplier = False
+				manufacturer_receiver = False
+				
+				supplier_count = 0
+				supplier_not_found_flag = True
+				
+				for item in manufacturers_list:
+					supplier_count = supplier_count + 1
+					
+					if str(transaction.supplier_puk.exportKey("PEM").decode('utf-8')) == str(item.publickey().exportKey("PEM").decode('utf-8')):
+							supplier_not_found_flag = False
+							manufacturer_suppplier = True
+							break
+				
+				if(supplier_not_found_flag):
+					supplier_count = 0
+					
+					for item in other_users_list:
+						supplier_count = supplier_count + 1
+					
+						if str(transaction.supplier_puk.exportKey("PEM").decode('utf-8')) == str(item.publickey().exportKey("PEM").decode('utf-8')):
+							supplier_not_found_flag = False
+							break
+				
+				receiver_count = 0
+				receiver_not_found_flag = True
+				
+				for item in manufacturers_list:
+					receiver_count = receiver_count + 1
+					
+					if str(transaction.receiver_puk) == str(item.publickey().exportKey("PEM").decode('utf-8')):
+							receiver_not_found_flag = False
+							manufacturer_receiver = True
+							break
+				
+				if(receiver_not_found_flag):
+					receiver_count = 0
+					
+					for item in other_users_list:
+						receiver_count = receiver_count + 1
+					
+						if str(transaction.receiver_puk) == str(item.publickey().exportKey("PEM").decode('utf-8')):
+							receiver_not_found_flag = False
+							break
+				
+				final_result = ""
+				
+				if(manufacturer_suppplier):
+					final_result = final_result + "Manufacturer #" + str(supplier_count) + " transferred the asset to "
+				else:
+					final_result = final_result + "Stakeholder #" + str(supplier_count) + " transferred the asset to "
+
+				if(manufacturer_receiver):
+					final_result = final_result + "Manufacturer #" + str(receiver_count) + " at " + str(transaction.timestamp)
+				else:
+					final_result = final_result + "Stakeholder #" + str(receiver_count) + " at " + str(transaction.timestamp)
+				
+				print(final_result)
+				
+	if(not_found_flag):
+		print('\nThe item code was not found in the blockchain.')
 
 # Generating keys for manufactures and other users
 number_manufacturers = int(input('\nEnter the number of manufacturers: '))
 generate_manufacturer_keys(number_manufacturers)
 	
-number_other_users = int(input('\nEnter the number of other users: '))
+number_other_users = int(input('\nEnter the number of stakeholders: '))
 generate_other_keys(number_other_users)
 
 # Inserting a genesis block into blockchain
@@ -278,8 +347,9 @@ while(1):
 	print('3. View the UTXO array. ')
 	print('4. Mine a block. ')
 	print('5. Verify the blockchain. ')
-	print('6. Generate RSA keys for other users. ')
-	print('7. Exit.')
+	print('6. Generate RSA keys. ')
+	print('7. Track an item.')
+	print('8. Exit.')
 	
 	choice = int(input('Enter your choice: '))
 	
@@ -294,9 +364,14 @@ while(1):
 	elif(choice == 5):
 		verify_blockchain()
 	elif(choice == 6):
-		number = input('Enter the number of other users: ')
-		generate_other_keys(number)
+		number_manufacturers = int(input('\nEnter the number of manufacturers: '))
+		generate_manufacturer_keys(number_manufacturers)
+		number_other_users = int(input('Enter the number of stakeholders: '))
+		generate_other_keys(number_other_users)
 	elif(choice == 7):
+		item_code = input('Enter the item code: ')
+		track_item(item_code)
+	elif(choice == 8):
 		break
 	else:
 		print('This is an invalid option.')
