@@ -28,9 +28,9 @@ The program looks at the functionality that is mandatory for a asset tracking bl
 * `Track an item` - This allows to track a particular item through the blockchain.
 
 # Screenshots
-* ![Step I](images/step1.png)
-* ![Step II](images/step2.png)
-* ![Step III](images/step3.png)
-* ![Step IV](images/step4.png)
-* ![Step V](images/step5.png)
-* ![Step VI](images/step6.png)
+<p align="center"> <img src = 'images/step1.png' </p>
+<p align="center"> <img src = 'images/step2.png' </p>
+<p align="center"> <img src = 'images/step3.png' </p>
+<p align="center"> <img src = 'images/step4.png' </p>
+<p align="center"> <img src = 'images/step5.png' </p>
+<p align="center"> <img src = 'images/step6.png' </p>
