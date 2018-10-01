@@ -5,6 +5,7 @@ import datetime as date
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto import Random
+from Crypto.Signature import pkcs1_15
 
 import random
 import time
@@ -139,8 +140,10 @@ def make_transaction(supplier_key, receiver_key, item_id):
 	
 	# Generating the message text and the signature
 	message = str(supplier_puk.exportKey("PEM").decode('utf-8')) + str(receiver_puk) + item_id + str(timestamp)
-	hash_message = SHA256.new(message.encode('utf-8')).digest()
-	signature = supplier_key.sign(hash_message, '')
+	hash_message = SHA256.new(message.encode('utf-8'))
+	
+	supplier_prk = RSA.import_key(supplier_key.exportKey("DER"))
+	signature = pkcs1_15.new(supplier_prk).sign(hash_message)
 	
 	# Creating a new transaction
 	new_transaction = Transaction(supplier_puk, receiver_puk, item_id, timestamp, signature)
@@ -189,10 +192,16 @@ def mine_block():
 
 # This function is used for the verifying the signature of the transaction
 def verify_transaction(self):
-	message = str(self.supplier_puk.exportKey("PEM").decode('utf-8')) + str(self.receiver_puk) + self.item_id + str(self.timestamp)
-	hash_message = SHA256.new(message.encode('utf-8')).digest()
+	supplier_puk = RSA.import_key(self.supplier_puk.exportKey("DER"))
 	
-	return self.supplier_puk.verify(hash_message, self.signature)
+	message = str(self.supplier_puk.exportKey("PEM").decode('utf-8')) + str(self.receiver_puk) + self.item_id + str(self.timestamp)
+	hash_message = SHA256.new(message.encode('utf-8'))
+	
+	try:
+		pkcs1_15.new(supplier_puk).verify(hash_message, self.signature)
+		return True
+	except (ValueError, TypeError):
+		return False
 	
 # Smart contract for checking if the input item code is avaiable on the blockchain & checking the previous owner of the consignment
 def check_item_code(self):
@@ -252,14 +261,14 @@ def verify_blockchain():
 def generate_manufacturer_keys(number):
 	for item in range(0, int(number)):
 		manufacturers_list.append(RSA.generate(1024, Random.new().read))
-	print(manufacturers_list)
+	#print(manufacturers_list)
 	print('\nThe manufacturer keys have been generated.')
 	
 # Function for generating stakeholder keys
 def generate_other_keys(number):
 	for item in range(0, int(number)):
 		other_users_list.append(RSA.generate(1024, Random.new().read))
-	print(other_users_list)
+	#print(other_users_list)
 	print('\nThe stakeholder keys have been generated.')
 	
 # Function for tracking an item
